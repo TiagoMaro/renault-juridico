@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: juridico_db
+    environment:
+      POSTGRES_USER: juridico
+      POSTGRES_PASSWORD: juridico
+      POSTGRES_DB: juridico
+    ports:
+      - '5432:5432'
+    volumes:
+      - dados_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U juridico -d juridico']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: juridico_api
+    environment:
+      DATABASE_URL: postgresql+psycopg2://juridico:juridico@db:5432/juridico
+      SECRET_KEY: ${SECRET_KEY:-troque-esta-chave-em-producao}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+    ports:
+      - '8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: juridico_web
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+volumes:
+  dados_postgres:
