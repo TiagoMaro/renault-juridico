@@ -464,7 +464,7 @@ def dashboard_financeiro(
     alertas: list[str] = []
     if float(adiantamentos_abertos[0] or 0) > 0:
         alertas.append(
-            f"{adiantamentos_abertos[1]} adiantamento(s) sem baixa, somando "
+            f"{adiantamentos_abertos[1]} adiantamento(s) sem baixa, somando"
             f"{formatar_moeda(float(adiantamentos_abertos[0]))}."
         )
     if em_processamento > 0:

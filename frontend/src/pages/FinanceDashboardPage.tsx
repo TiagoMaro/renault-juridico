@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -23,7 +24,7 @@ import {
 } from 'recharts';
 
 import { api } from '../api/client';
-import type { FiltrosFinanceiro } from '../api/types';
+import type { FiltrosFinanceiro, StatusLancamento } from '../api/types';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
 import FiltrosFinanceiros, { BotaoFiltrosFinanceiros } from '../components/FiltrosFinanceiros';
 import { useRequisicao } from '../hooks/useRequisicao';
@@ -40,6 +41,7 @@ interface Props {
 export default function FinanceDashboardPage({ navigate }: Props) {
   const [filtros, setFiltros] = useState<FiltrosFinanceiro>({});
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [detalhe, setDetalhe] = useState<'em_processamento' | 'adiantamentos' | null>(null);
 
   const chave = JSON.stringify(filtros);
   const { dados, carregando, erro, recarregar } = useRequisicao(
@@ -130,6 +132,15 @@ export default function FinanceDashboardPage({ navigate }: Props) {
               valor={moedaCompacta(dados.em_processamento.valor)}
               detalhe={`${numero(dados.em_processamento.quantidade)} em aberto`}
               cor="#D97706"
+              onClick={() => setDetalhe('em_processamento')}
+            />
+            <Kpi
+              icon={Wallet}
+              titulo="Adiantamentos em aberto"
+              valor={moedaCompacta(dados.adiantamentos_em_aberto.valor)}
+              detalhe={`${numero(dados.adiantamentos_em_aberto.quantidade)} sem baixa`}
+              cor="#EA580C"
+              onClick={() => setDetalhe('adiantamentos')}
             />
             <Kpi
               icon={Receipt}
@@ -139,13 +150,6 @@ export default function FinanceDashboardPage({ navigate }: Props) {
               cor="#7C3AED"
             />
             <Kpi
-              icon={Wallet}
-              titulo="Adiantamentos em aberto"
-              valor={moedaCompacta(dados.adiantamentos_em_aberto.valor)}
-              detalhe={`${numero(dados.adiantamentos_em_aberto.quantidade)} sem baixa`}
-              cor="#EA580C"
-            />
-            <Kpi
               icon={ArrowDownLeft}
               titulo="Devoluções"
               valor={moedaCompacta(dados.devolucoes.valor)}
@@ -153,21 +157,6 @@ export default function FinanceDashboardPage({ navigate }: Props) {
               cor="#0891B2"
             />
           </div>
-
-          {/* Alertas */}
-          {dados.alertas.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-              {dados.alertas.map((alerta, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-100 bg-amber-50"
-                >
-                  <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-slate-700 leading-relaxed">{alerta}</p>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Evolução mensal */}
           <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -285,31 +274,192 @@ export default function FinanceDashboardPage({ navigate }: Props) {
           </div>
         </>
       )}
+      {detalhe && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setDetalhe(null)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-4xl max-h-[80vh] overflow-auto p-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900 font-display">
+                {detalhe === 'em_processamento' ? 'Em processamento' : 'Adiantamentos em aberto'}
+              </h3>
+              <button
+                onClick={() => setDetalhe(null)}
+                className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+            {detalhe === 'adiantamentos' && <ListaAdiantamentos filtros={filtros} />}
+            {detalhe === 'em_processamento' && <ListaEmProcessamento filtros={filtros} />}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function Kpi({
   icon: Icon,
+  onClick,
   titulo,
   valor,
   detalhe,
   cor,
 }: {
   icon: React.ElementType;
+  onClick?: () => void;
   titulo: string;
   valor: string;
   detalhe: string;
   cor: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={`bg-white rounded-xl border border-slate-200 p-4 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300 transition' : ''
+        }`}
+    >
       <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ background: `${cor}14` }}>
         <Icon size={18} style={{ color: cor }} />
       </div>
       <div className="text-lg font-bold text-slate-900 font-display">{valor}</div>
       <div className="text-xs font-medium text-slate-600 mt-1">{titulo}</div>
       <div className="text-xs text-slate-400 mt-0.5">{detalhe}</div>
+    </div>
+  );
+}
+
+function ListaAdiantamentos({ filtros }: { filtros: FiltrosFinanceiro }) {
+  const { dados, carregando, erro, recarregar } = useRequisicao(
+    () => api.financeiro.adiantamentos({ em_aberto: true, area: filtros.area, ano: filtros.ano }),
+    [filtros.area, filtros.ano],
+  );
+  const lista = dados ?? [];
+  const abertos = lista.filter(a => !a.baixado);
+
+  if (carregando) return <Carregando mensagem="Buscando adiantamentos..." />;
+  if (erro) return <ErroCarregamento mensagem={erro} aoTentarNovamente={recarregar} />;
+  if (abertos.length === 0) {
+    return <p className="text-sm text-slate-400 text-center py-8">Nenhum adiantamento em aberto.</p>;
+  }
+
+  const total = abertos.reduce((soma, a) => soma + a.valor, 0);
+
+  return (
+    <div>
+      <p className="text-xs text-slate-500 mb-3">
+        {numero(abertos.length)} adiantamentos · {moeda(total)}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500">
+              <th className="py-2 pr-4 font-medium">Escritório</th>
+              <th className="py-2 pr-4 font-medium">Área</th>
+              <th className="py-2 pr-4 font-medium">DOA</th>
+              <th className="py-2 pr-4 font-medium text-right">Valor</th>
+              <th className="py-2 pr-4 font-medium">Chamado</th>
+              <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 font-medium">Ano</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {abertos.map(a => (
+              <tr key={a.id}>
+                <td className="py-2.5 pr-4 text-slate-800">{a.escritorio}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{a.area}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{a.doa}</td>
+                <td className="py-2.5 pr-4 text-right font-mono text-slate-800">{moeda(a.valor)}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{a.chamado_adiantamento}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{a.status}</td>
+                <td className="py-2.5 text-slate-600">{a.ano_referencia}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_EM_PROCESSAMENTO: StatusLancamento[] = [
+  'Lançar Pgto',
+  'RC Criada',
+  'Pedido Concluído',
+  'Pedido Recepcionado',
+  'Enviado para pagamento',
+];
+
+function ListaEmProcessamento({ filtros }: { filtros: FiltrosFinanceiro }) {
+  const { dados, carregando, erro, recarregar } = useRequisicao(
+    async () => {
+      const respostas = await Promise.all(
+        STATUS_EM_PROCESSAMENTO.map(status =>
+          api.financeiro.lancamentos({ ...filtros, status, por_pagina: 200 }),
+        ),
+      );
+      return {
+        itens: respostas.flatMap(r => r.itens),
+        truncado: respostas.some(r => r.total_paginas > 1),
+      };
+    },
+    [JSON.stringify(filtros)],
+  );
+
+  if (carregando) return <Carregando mensagem="Buscando lançamentos..." />;
+  if (erro) return <ErroCarregamento mensagem={erro} aoTentarNovamente={recarregar} />;
+  if (!dados || dados.itens.length === 0) {
+    return <p className="text-sm text-slate-400 text-center py-8">Nenhum lançamento em processamento.</p>;
+  }
+
+  const itens = [...dados.itens].sort((a, b) => b.valor - a.valor);
+  const total = itens.reduce((soma, l) => soma + l.valor, 0);
+
+  return (
+    <div>
+      <p className="text-xs text-slate-500 mb-3">
+        {numero(itens.length)} lançamentos · {moeda(total)}
+      </p>
+      {dados.truncado && (
+        <p className="text-xs text-amber-600 mb-3">
+          Algum status tem mais de 200 lançamentos, então a lista está incompleta.
+        </p>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500">
+              <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">Área</th>
+              <th className="py-2 pr-4 font-medium">Referência</th>
+              <th className="py-2 pr-4 font-medium">Motivo</th>
+              <th className="py-2 pr-4 font-medium text-right">Valor</th>
+              <th className="py-2 pr-4 font-medium">Mês</th>
+              <th className="py-2 font-medium">Pedido</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {itens.map(l => (
+              <tr key={l.id}>
+                <td className="py-2.5 pr-4 text-slate-800">{l.status}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{l.area}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{l.referencia}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{l.motivo}</td>
+                <td className="py-2.5 pr-4 text-right font-mono text-slate-800">{moeda(l.valor)}</td>
+                <td className="py-2.5 pr-4 text-slate-600">{l.mes_referencia}</td>
+                <td className="py-2.5 text-slate-600">{l.numero_pedido}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
