@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import {
-  AlertTriangle,
   ArrowDownLeft,
   Banknote,
   CheckCircle2,
