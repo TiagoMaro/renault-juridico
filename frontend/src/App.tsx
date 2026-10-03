@@ -23,6 +23,7 @@ import ProcessesPage from './pages/ProcessesPage';
 import RegisterPage from './pages/RegisterPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import HistoricoFinanceiroPage from './pages/HistoricoFinanceiroPage';
 import UsersPage from './pages/UsersPage';
 
 function Sistema() {
@@ -83,6 +84,7 @@ function Sistema() {
       {currentPage === 'fin-adiantamentos' && <AdiantamentosPage />}
       {currentPage === 'fin-devolucoes' && <DevolucoesPage />}
       {currentPage === 'fin-import' && <FinanceImportPage navigate={navigate} />}
+      {currentPage === 'fin-historico' && <HistoricoFinanceiroPage />}
     </Layout>
   );
 }

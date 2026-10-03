@@ -22,6 +22,7 @@ import {
   Upload,
   Users,
   X,
+  ClipboardList,
 } from 'lucide-react';
 
 import { api } from '../api/client';
@@ -66,6 +67,7 @@ const grupos: GrupoNav[] = [
       { icon: Wallet, label: 'Adiantamentos', page: 'fin-adiantamentos' },
       { icon: ArrowDownLeft, label: 'Devoluções', page: 'fin-devolucoes' },
       { icon: ListChecks, label: 'Cadastros', page: 'fin-cadastros' },
+      { icon: ClipboardList, label: 'Hist. de alterações', page: 'fin-historico', perfilMinimo: 'Analista' },
       { icon: Upload, label: 'Importar pagamentos', page: 'fin-import', perfilMinimo: 'Analista' },
     ],
   },
@@ -98,6 +100,7 @@ const pageTitles: Record<Page, string[]> = {
   'fin-adiantamentos': ['Financeiro', 'Adiantamentos'],
   'fin-devolucoes': ['Financeiro', 'Devoluções'],
   'fin-import': ['Financeiro', 'Importar pagamentos'],
+  'fin-historico': ['Financeiro', 'Histórico de alterações'],
 };
 
 const CORES_SEVERIDADE: Record<string, string> = {
@@ -197,9 +200,8 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
                     key={page}
                     onClick={() => navigate(page)}
                     title={!sidebarOpen ? `${grupo.titulo} · ${label}` : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative ${
-                      active ? 'text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative ${active ? 'text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
                     style={active ? { background: 'rgba(0,53,173,0.5)' } : {}}
                   >
                     {active && (
@@ -323,9 +325,8 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
                       className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0"
                     >
                       <span
-                        className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                          CORES_SEVERIDADE[alerta.severidade] ?? 'bg-slate-400'
-                        }`}
+                        className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CORES_SEVERIDADE[alerta.severidade] ?? 'bg-slate-400'
+                          }`}
                       />
                       <p className="text-sm text-slate-700 flex-1">{alerta.texto}</p>
                     </button>

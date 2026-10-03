@@ -614,3 +614,32 @@ export interface FiltrosFinanceiro {
   valor_max?: number;
   busca?: string;
 }
+
+// --------------------------------------------------------------------------
+// Histórico de alterações do financeiro
+// --------------------------------------------------------------------------
+
+export type EntidadeFinanceira = 'lancamento' | 'adiantamento' | 'devolucao';
+export type AcaoHistorico = 'criacao' | 'alteracao' | 'exclusao';
+
+export interface HistoricoFinanceiro {
+  id: number;
+  data: string;
+  usuario_nome: string | null;
+  entidade: EntidadeFinanceira;
+  entidade_id: number;
+  acao: AcaoHistorico;
+  resumo: string | null;
+  campo: string | null;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  origem: string;
+}
+
+export interface HistoricoFinanceiroLista {
+  itens: HistoricoFinanceiro[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}

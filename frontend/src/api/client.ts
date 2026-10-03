@@ -14,6 +14,7 @@ import type {
   FiltroOpcoes,
   FiltrosFinanceiro,
   FiltrosProcesso,
+  HistoricoFinanceiroLista,
   Importacao,
   ImportacaoDetalhe,
   ImportacaoFinanceira,
@@ -269,6 +270,17 @@ export const api = {
     opcoesFiltro: () => requisitar<OpcoesFiltroFinanceiro>('/financeiro/lancamentos/opcoes-filtro'),
     exportarLancamentos: (filtros: FiltrosFinanceiro = {}) =>
       baixarArquivo(`/financeiro/lancamentos/exportar${montarQuery(filtros)}`, 'lancamentos.xlsx'),
+        historico: (
+      filtros: {
+        entidade?: string;
+        acao?: string;
+        usuario_id?: number;
+        data_de?: string;
+        data_ate?: string;
+        pagina?: number;
+        por_pagina?: number;
+      } = {},
+    ) => requisitar<HistoricoFinanceiroLista>(`/financeiro/historico${montarQuery(filtros)}`),
 
     anos: () => requisitar<AnosFinanceiros>('/financeiro/anos'),
     definirMesFechamento: (ano: number, mes_fechamento: number) =>

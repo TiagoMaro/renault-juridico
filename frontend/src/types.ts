@@ -17,6 +17,7 @@ export type Page =
   | 'fin-cadastros'
   | 'fin-adiantamentos'
   | 'fin-devolucoes'
-  | 'fin-import';
+  | 'fin-import'
+  | 'fin-historico';
 
 export type NavigateFn = (page: Page, params?: { processId?: number }) => void;

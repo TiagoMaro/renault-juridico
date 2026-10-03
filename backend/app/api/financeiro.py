@@ -10,6 +10,8 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from app.models.historico_financeiro import HistoricoFinanceiro
+from app.schemas.historico_financeiro import HistoricoFinanceiroLista, HistoricoFinanceiroOut
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
@@ -52,7 +54,13 @@ from app.schemas.financeiro import (
 import uuid
 
 from app.services import financeiro as servico
-from app.services.auditoria import formatar_moeda
+from app.services.auditoria import (
+    formatar_moeda,
+    registrar_alteracoes,
+    registrar_criacao,
+    registrar_exclusao,
+    tirar_foto,
+)
 from app.services.financeiro import MESES_NOME, canonizar
 from app.services.financeiro_relatorios import ano_padrao
 from app.services.leitura import PlanilhaInvalida
@@ -356,7 +364,7 @@ def obter_lancamento(
 def criar_lancamento(
     dados: LancamentoCriar,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(exigir_analista),
+    usuario: Usuario = Depends(exigir_analista),
 ) -> LancamentoOut:
     """Novo pagamento lançado direto no sistema (sem passar pela planilha)."""
     campos = dados.model_dump()
@@ -364,6 +372,8 @@ def criar_lancamento(
     lancamento = Lancamento(fingerprint=f"manual-{uuid.uuid4().hex}", valor=campos["valor"])
     _aplicar_lancamento(lancamento, campos)
     db.add(lancamento)
+    db.flush()  # gera o id, que o histórico precisa
+    registrar_criacao(db, "lancamento", lancamento, usuario)
     db.commit()
     db.refresh(lancamento)
     return LancamentoOut.model_validate(lancamento)
@@ -374,13 +384,15 @@ def atualizar_lancamento(
     lancamento_id: int,
     dados: LancamentoEntrada,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(exigir_analista),
+    usuario: Usuario = Depends(exigir_analista),
 ) -> LancamentoOut:
     lancamento = db.get(Lancamento, lancamento_id)
     if lancamento is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lançamento não encontrado.")
 
+    antes = tirar_foto(lancamento, "lancamento")
     _aplicar_lancamento(lancamento, dados.model_dump(exclude_unset=True))
+    registrar_alteracoes(db, "lancamento", lancamento, antes, usuario)
     db.commit()
     db.refresh(lancamento)
     return LancamentoOut.model_validate(lancamento)
@@ -388,14 +400,53 @@ def atualizar_lancamento(
 
 @router.delete("/lancamentos/{lancamento_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response, response_model=None)
 def excluir_lancamento(
-    lancamento_id: int, db: Session = Depends(get_db), _: Usuario = Depends(exigir_analista)
+    lancamento_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(exigir_analista)
 ) -> None:
     lancamento = db.get(Lancamento, lancamento_id)
     if lancamento is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lançamento não encontrado.")
+    registrar_exclusao(db, "lancamento", lancamento, usuario)
     db.delete(lancamento)
     db.commit()
 
+@router.get("/historico", response_model=HistoricoFinanceiroLista)
+def listar_historico(
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(exigir_analista),
+    entidade: str | None = Query(None, pattern="^(lancamento|adiantamento|devolucao)$"),
+    acao: str | None = Query(None, pattern="^(criacao|alteracao|exclusao)$"),
+    usuario_id: int | None = Query(None),
+    data_de: date | None = Query(None),
+    data_ate: date | None = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(25, ge=1, le=200),
+) -> HistoricoFinanceiroLista:
+    stmt = select(HistoricoFinanceiro)
+    if entidade:
+        stmt = stmt.where(HistoricoFinanceiro.entidade == entidade)
+    if acao:
+        stmt = stmt.where(HistoricoFinanceiro.acao == acao)
+    if usuario_id:
+        stmt = stmt.where(HistoricoFinanceiro.usuario_id == usuario_id)
+    if data_de:
+        stmt = stmt.where(func.date(HistoricoFinanceiro.data) >= data_de)
+    if data_ate:
+        stmt = stmt.where(func.date(HistoricoFinanceiro.data) <= data_ate)
+
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    itens = db.scalars(
+        stmt.order_by(HistoricoFinanceiro.data.desc(), HistoricoFinanceiro.id.desc())
+        .offset((pagina - 1) * por_pagina)
+        .limit(por_pagina)
+    ).all()
+
+    return HistoricoFinanceiroLista(
+        itens=[HistoricoFinanceiroOut.model_validate(i) for i in itens],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=max(1, -(-total // por_pagina)),
+    )
 
 # --------------------------------------------------------------------------
 # Dashboard
@@ -556,7 +607,7 @@ def _aplicar_adiantamento(adiantamento: Adiantamento, dados: dict) -> None:
 
 @router.post("/adiantamentos", response_model=AdiantamentoOut, status_code=status.HTTP_201_CREATED)
 def criar_adiantamento(
-    dados: AdiantamentoEntrada, db: Session = Depends(get_db), _: Usuario = Depends(exigir_analista)
+    dados: AdiantamentoEntrada, db: Session = Depends(get_db), usuario: Usuario = Depends(exigir_analista)
 ) -> AdiantamentoOut:
     campos = dados.model_dump()
     campos["ano_referencia"] = campos.get("ano_referencia") or ano_padrao(db)
@@ -564,6 +615,8 @@ def criar_adiantamento(
     adiantamento = Adiantamento(fingerprint=f"manual-{uuid.uuid4().hex}")
     _aplicar_adiantamento(adiantamento, campos)
     db.add(adiantamento)
+    db.flush()
+    registrar_criacao(db, "adiantamento", adiantamento, usuario)
     db.commit()
     db.refresh(adiantamento)
     return AdiantamentoOut.model_validate(adiantamento)
@@ -574,12 +627,14 @@ def atualizar_adiantamento(
     adiantamento_id: int,
     dados: AdiantamentoEntrada,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(exigir_analista),
+    usuario: Usuario = Depends(exigir_analista),
 ) -> AdiantamentoOut:
     adiantamento = db.get(Adiantamento, adiantamento_id)
     if adiantamento is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Adiantamento não encontrado.")
+    antes = tirar_foto(adiantamento, "adiantamento")
     _aplicar_adiantamento(adiantamento, dados.model_dump(exclude_unset=True))
+    registrar_alteracoes(db, "adiantamento", adiantamento, antes, usuario)
     db.commit()
     db.refresh(adiantamento)
     return AdiantamentoOut.model_validate(adiantamento)
@@ -587,11 +642,12 @@ def atualizar_adiantamento(
 
 @router.delete("/adiantamentos/{adiantamento_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response, response_model=None)
 def excluir_adiantamento(
-    adiantamento_id: int, db: Session = Depends(get_db), _: Usuario = Depends(exigir_analista)
+    adiantamento_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(exigir_analista)
 ) -> None:
     adiantamento = db.get(Adiantamento, adiantamento_id)
     if adiantamento is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Adiantamento não encontrado.")
+    registrar_exclusao(db, "adiantamento", adiantamento, usuario)
     db.delete(adiantamento)
     db.commit()
 
@@ -625,7 +681,7 @@ def _aplicar_devolucao(devolucao: Devolucao, dados: dict) -> None:
 
 @router.post("/devolucoes", response_model=DevolucaoOut, status_code=status.HTTP_201_CREATED)
 def criar_devolucao(
-    dados: DevolucaoEntrada, db: Session = Depends(get_db), _: Usuario = Depends(exigir_analista)
+    dados: DevolucaoEntrada, db: Session = Depends(get_db), usuario: Usuario = Depends(exigir_analista)
 ) -> DevolucaoOut:
     campos = dados.model_dump()
     if not campos.get("valor_devolvido"):
@@ -634,6 +690,8 @@ def criar_devolucao(
     devolucao = Devolucao(fingerprint=f"manual-{uuid.uuid4().hex}")
     _aplicar_devolucao(devolucao, campos)
     db.add(devolucao)
+    db.flush()  # NOVO
+    registrar_criacao(db, "devolucao", devolucao, usuario)  # NOVO
     db.commit()
     db.refresh(devolucao)
     return DevolucaoOut.model_validate(devolucao)
@@ -644,12 +702,14 @@ def atualizar_devolucao(
     devolucao_id: int,
     dados: DevolucaoEntrada,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(exigir_analista),
+    usuario: Usuario = Depends(exigir_analista),
 ) -> DevolucaoOut:
     devolucao = db.get(Devolucao, devolucao_id)
     if devolucao is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Devolução não encontrada.")
+    antes = tirar_foto(devolucao, "devolucao")  # NOVO
     _aplicar_devolucao(devolucao, dados.model_dump(exclude_unset=True))
+    registrar_alteracoes(db, "devolucao", devolucao, antes, usuario)  # NOVO
     db.commit()
     db.refresh(devolucao)
     return DevolucaoOut.model_validate(devolucao)
@@ -657,11 +717,12 @@ def atualizar_devolucao(
 
 @router.delete("/devolucoes/{devolucao_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response, response_model=None)
 def excluir_devolucao(
-    devolucao_id: int, db: Session = Depends(get_db), _: Usuario = Depends(exigir_analista)
+    devolucao_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(exigir_analista)
 ) -> None:
     devolucao = db.get(Devolucao, devolucao_id)
     if devolucao is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Devolução não encontrada.")
+    registrar_exclusao(db, "devolucao", devolucao, usuario)  # NOVO
     db.delete(devolucao)
     db.commit()
 
@@ -687,7 +748,7 @@ async def _ler_upload(arquivo: UploadFile) -> bytes:
 @router.post("/importacoes/preview", response_model=PreviewFinanceiro)
 async def preview_importacao(
     arquivo: UploadFile = File(...),
-    _: Usuario = Depends(exigir_analista),
+    usuario: Usuario = Depends(exigir_analista),
 ) -> PreviewFinanceiro:
     """Mostra o que será feito com cada aba, sem gravar nada."""
     conteudo = await _ler_upload(arquivo)
