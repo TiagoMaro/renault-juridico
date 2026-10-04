@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  BarChart3,
   CheckCircle2,
   ChevronRight,
   Eye,
   Info,
+  PieChart as IconePizza,
   Scale,
   TrendingDown,
   TrendingUp,
+  Users,
   XCircle,
 } from 'lucide-react';
 import {
@@ -17,7 +20,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -30,6 +33,12 @@ import { api } from '../api/client';
 import type { FiltrosProcesso } from '../api/types';
 import { NaturezaBadge, StatusBadge } from '../components/Badges';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
+import {
+  CabecalhoGrafico,
+  GraficoBarrasHorizontais,
+  percentualInteiro,
+  rotuloPercentual,
+} from '../components/graficos';
 import FiltrosGlobais, { BotaoFiltros } from '../components/FiltrosGlobais';
 import { useRequisicao } from '../hooks/useRequisicao';
 import type { NavigateFn } from '../types';
@@ -74,6 +83,13 @@ export default function DashboardPage({ navigate }: Props) {
 
   const { kpis, evolucao, por_natureza, por_fase, por_risco, por_posicao, risco_por_natureza } = dados;
   const semDados = kpis.total_processos.valor === 0;
+
+  // Totais exibidos nos selos dos gráficos e usados no cálculo das porcentagens.
+  const somar = (itens: { quantidade: number }[]) => itens.reduce((soma, item) => soma + item.quantidade, 0);
+  const totalFase = somar(por_fase);
+  const totalRisco = somar(por_risco);
+  const totalNatureza = somar(por_natureza);
+  const totalPosicao = somar(por_posicao);
 
   return (
     <div className="p-6 space-y-6">
@@ -131,7 +147,7 @@ export default function DashboardPage({ navigate }: Props) {
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <KpiCard
               icon={Scale}
               title="Total de processos"
@@ -185,6 +201,7 @@ export default function DashboardPage({ navigate }: Props) {
               invertido
               desc="processos sem defesa"
               color="#DC2626"
+              alerta={kpis.defesa_pendente.valor > 0}
             />
           </div>
 
@@ -290,7 +307,12 @@ export default function DashboardPage({ navigate }: Props) {
                       />
                       <span className="text-slate-600">{item.label}</span>
                     </div>
-                    <span className="font-medium text-slate-800">{numero(item.quantidade)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-slate-900">{numero(item.quantidade)}</span>
+                      <span className="text-slate-400 w-9 text-right">
+                        {percentualInteiro(item.quantidade, totalRisco)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -300,64 +322,89 @@ export default function DashboardPage({ navigate }: Props) {
           {/* Row 3: By nature + By phase */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-slate-900 text-sm font-display mb-1">Processos por Natureza</h3>
-              <p className="text-xs text-slate-400 mb-4">Volume por tipo de ação</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={por_natureza} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: '#64748B' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={90}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: 12 }}
-                    formatter={(v: number) => [numero(v), 'Processos']}
-                  />
-                  <Bar dataKey="quantidade" fill={BRAND} radius={[0, 4, 4, 0]} name="Processos" />
-                </BarChart>
-              </ResponsiveContainer>
+              <CabecalhoGrafico
+                icone={BarChart3}
+                titulo="Processos por Natureza"
+                subtitulo="Volume por tipo de ação"
+                total={numero(totalNatureza)}
+                legendaTotal="total de processos"
+              />
+              <GraficoBarrasHorizontais
+                dados={por_natureza}
+                chaveRotulo="label"
+                chaveValor="quantidade"
+                nome="Processos"
+                formatar={numero}
+                cor={BRAND}
+              />
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-slate-900 text-sm font-display mb-1">Distribuição por Fase</h3>
-              <p className="text-xs text-slate-400 mb-4">Fase processual atual</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={por_fase}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="quantidade"
-                    nameKey="label"
-                    paddingAngle={2}
-                  >
-                    {por_fase.map((_, i) => (
-                      <Cell key={i} fill={PHASE_COLORS[i % PHASE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: 12 }}
-                    formatter={(v: number, n: string) => [`${numero(v)} processos`, n]}
-                  />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
+              <CabecalhoGrafico
+                icone={IconePizza}
+                titulo="Distribuição por Fase"
+                subtitulo="Fase processual atual"
+                total={numero(totalFase)}
+                legendaTotal="total de processos"
+              />
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-full sm:w-1/2">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={por_fase}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={95}
+                        dataKey="quantidade"
+                        nameKey="label"
+                        paddingAngle={2}
+                        label={rotuloPercentual}
+                        labelLine={false}
+                      >
+                        {por_fase.map((_, i) => (
+                          <Cell key={i} fill={PHASE_COLORS[i % PHASE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: 12 }}
+                        formatter={(v: number, n: string) => [`${numero(v)} processos`, n]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Legenda em tabela: cor, fase, quantidade e porcentagem */}
+                <div className="w-full sm:w-1/2 space-y-2.5">
+                  {por_fase.map((item, i) => (
+                    <div key={item.label} className="flex items-center gap-2 text-xs">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: PHASE_COLORS[i % PHASE_COLORS.length] }}
+                      />
+                      <span className="flex-1 text-slate-600 truncate">{item.label}</span>
+                      <span className="font-bold text-slate-900 w-7 text-right">{numero(item.quantidade)}</span>
+                      <span className="text-slate-400 w-9 text-right">
+                        {percentualInteiro(item.quantidade, totalFase)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Row 4: Position + Value by nature */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-slate-900 text-sm font-display mb-1">Processos por Posição</h3>
-              <p className="text-xs text-slate-400 mb-4">Polo ativo vs. polo passivo</p>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={por_posicao}>
+              <CabecalhoGrafico
+                icone={Users}
+                titulo="Processos por Posição"
+                subtitulo="Polo ativo vs. polo passivo"
+                total={numero(totalPosicao)}
+                legendaTotal="total de processos"
+              />
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={por_posicao} margin={{ top: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
@@ -369,41 +416,34 @@ export default function DashboardPage({ navigate }: Props) {
                     {por_posicao.map((item, i) => (
                       <Cell key={i} fill={item.label === 'Polo Ativo' ? BRAND : '#94A3B8'} />
                     ))}
+                    {/* Número acima de cada barra */}
+                    <LabelList
+                      dataKey="quantidade"
+                      position="top"
+                      style={{ fontSize: 13, fontWeight: 700, fill: '#0F172A' }}
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-slate-900 text-sm font-display mb-1">
-                Valor em Risco por Natureza
-              </h3>
-              <p className="text-xs text-slate-400 mb-4">Exposição financeira</p>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={risco_por_natureza} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 11, fill: '#94A3B8' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v: number) => moedaCompacta(v)}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: '#64748B' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={90}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: 12 }}
-                    formatter={(v: number) => [moedaCompacta(v), 'Valor em risco']}
-                  />
-                  <Bar dataKey="valor_risco" fill="#EA580C" radius={[0, 4, 4, 0]} name="Valor em risco" />
-                </BarChart>
-              </ResponsiveContainer>
+              <CabecalhoGrafico
+                icone={AlertTriangle}
+                titulo="Valor em Risco por Natureza"
+                subtitulo="Exposição financeira"
+                total={numero(totalNatureza)}
+                legendaTotal="total de processos"
+              />
+              <GraficoBarrasHorizontais
+                dados={risco_por_natureza}
+                chaveRotulo="label"
+                chaveValor="valor_risco"
+                nome="Valor em risco"
+                formatar={moedaCompacta}
+                cor="#EA580C"
+                corRotulo="#9A3412"
+              />
             </div>
           </div>
 
@@ -434,8 +474,8 @@ export default function DashboardPage({ navigate }: Props) {
                       key={i}
                       className={`flex items-start gap-3 p-3.5 rounded-xl border ${estilo.bg} ${estilo.borda}`}
                     >
-                      <Icone size={16} className={`${estilo.cor} flex-shrink-0 mt-0.5`} />
-                      <p className="text-xs text-slate-700 leading-relaxed">{ponto.texto}</p>
+                      <Icone size={20} className={`${estilo.cor} flex-shrink-0`} />
+                      <p className="text-sm font-medium text-slate-800 leading-snug">{ponto.texto}</p>
                     </div>
                   );
                 })}
@@ -538,6 +578,7 @@ function KpiCard({
   invertido,
   desc,
   color,
+  alerta = false,
 }: {
   icon: React.ElementType;
   title: string;
@@ -547,6 +588,8 @@ function KpiCard({
   invertido: boolean;
   desc: string;
   color: string;
+  /** true quando a descrição indica algo que precisa de atenção: vira um selo colorido. */
+  alerta?: boolean;
 }) {
   // Sem histórico suficiente o backend devolve null — não inventamos variação.
   // Variação zero também não vira badge: seta vermelha em "0,0%" engana o leitor.
@@ -555,21 +598,40 @@ function KpiCard({
   const bom = invertido ? !subiu : subiu;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${color}14` }}>
-          <Icon size={18} style={{ color }} />
+    <div className="bg-white rounded-xl border border-slate-200 p-5">
+      {/* O número é o protagonista; o ícone fica pequeno no canto */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-3xl sm:text-4xl font-bold text-slate-900 font-display leading-none whitespace-nowrap">
+          {value}
         </div>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}14` }}
+        >
+          <Icon size={15} style={{ color }} />
+        </div>
+      </div>
+      <div className="h-1 w-8 rounded-full mt-3" style={{ background: color }} />
+      <div className="text-sm font-semibold text-slate-800 mt-3">{title}</div>
+      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        {alerta ? (
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold"
+            style={{ background: `${color}1A`, color }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+            {desc}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">{desc}</span>
+        )}
         {mostrarVariacao && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${bom ? 'text-green-600' : 'text-red-500'}`}>
+          <span className={`flex items-center gap-1 text-xs font-medium ${bom ? 'text-green-600' : 'text-red-500'}`}>
             {subiu ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {percentual(trend)}
-          </div>
+          </span>
         )}
       </div>
-      <div className="text-xl font-bold text-slate-900 font-display">{value}</div>
-      <div className="text-xs font-medium text-slate-600 mt-1">{title}</div>
-      <div className="text-xs text-slate-400 mt-0.5">{desc}</div>
     </div>
   );
 }

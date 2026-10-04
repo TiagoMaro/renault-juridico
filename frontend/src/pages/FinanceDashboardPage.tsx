@@ -25,6 +25,7 @@ import {
 import { api } from '../api/client';
 import type { FiltrosFinanceiro, StatusLancamento } from '../api/types';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
+import { GraficoBarrasHorizontais, rotuloPercentual } from '../components/graficos';
 import FiltrosFinanceiros, { BotaoFiltrosFinanceiros } from '../components/FiltrosFinanceiros';
 import { useRequisicao } from '../hooks/useRequisicao';
 import type { NavigateFn } from '../types';
@@ -110,7 +111,7 @@ export default function FinanceDashboardPage({ navigate }: Props) {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Kpi
               icon={Banknote}
               titulo="Total lançado"
@@ -131,6 +132,7 @@ export default function FinanceDashboardPage({ navigate }: Props) {
               valor={moedaCompacta(dados.em_processamento.valor)}
               detalhe={`${numero(dados.em_processamento.quantidade)} em aberto`}
               cor="#D97706"
+              destaque
               onClick={() => setDetalhe('em_processamento')}
             />
             <Kpi
@@ -139,6 +141,7 @@ export default function FinanceDashboardPage({ navigate }: Props) {
               valor={moedaCompacta(dados.adiantamentos_em_aberto.valor)}
               detalhe={`${numero(dados.adiantamentos_em_aberto.quantidade)} sem baixa`}
               cor="#EA580C"
+              destaque
               onClick={() => setDetalhe('adiantamentos')}
             />
             <Kpi
@@ -209,31 +212,16 @@ export default function FinanceDashboardPage({ navigate }: Props) {
             <div className="bg-white rounded-xl border border-slate-200 p-5">
               <h3 className="font-semibold text-slate-900 text-sm font-display mb-1">Gasto por área</h3>
               <p className="text-xs text-slate-400 mb-4">Participação no total do período</p>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={dados.por_area.slice(0, 8)} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 11, fill: '#94A3B8' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v: number) => moedaCompacta(v)}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: '#64748B' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={120}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: 12 }}
-                    formatter={(v: number) => [moeda(v), 'Total']}
-                  />
-                  <Bar dataKey="valor" fill={BRAND} radius={[0, 4, 4, 0]} name="Total" />
-                </BarChart>
-              </ResponsiveContainer>
+              <GraficoBarrasHorizontais
+                dados={dados.por_area.slice(0, 8)}
+                chaveRotulo="label"
+                chaveValor="valor"
+                nome="Total"
+                formatar={moedaCompacta}
+                formatarTooltip={moeda}
+                cor={BRAND}
+                larguraRotulos={120}
+              />
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -247,6 +235,8 @@ export default function FinanceDashboardPage({ navigate }: Props) {
                     cy="50%"
                     innerRadius={55}
                     outerRadius={90}
+                    label={rotuloPercentual}
+                    labelLine={false}
                     dataKey="valor"
                     nameKey="label"
                     paddingAngle={2}
@@ -309,6 +299,7 @@ function Kpi({
   valor,
   detalhe,
   cor,
+  destaque = false,
 }: {
   icon: React.ElementType;
   onClick?: () => void;
@@ -316,21 +307,42 @@ function Kpi({
   valor: string;
   detalhe: string;
   cor: string;
+  /** true nos cards de alerta (ex.: "40 em aberto"): o detalhe vira um selo colorido. */
+  destaque?: boolean;
 }) {
   return (
     <div
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={`bg-white rounded-xl border border-slate-200 p-4 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300 transition' : ''
+      className={`bg-white rounded-xl border border-slate-200 p-5 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300 transition' : ''
         }`}
     >
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ background: `${cor}14` }}>
-        <Icon size={18} style={{ color: cor }} />
+      {/* O número é o protagonista; o ícone fica pequeno no canto */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-3xl sm:text-4xl font-bold text-slate-900 font-display leading-none whitespace-nowrap">
+          {valor}
+        </div>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: `${cor}14` }}
+        >
+          <Icon size={15} style={{ color: cor }} />
+        </div>
       </div>
-      <div className="text-lg font-bold text-slate-900 font-display">{valor}</div>
-      <div className="text-xs font-medium text-slate-600 mt-1">{titulo}</div>
-      <div className="text-xs text-slate-400 mt-0.5">{detalhe}</div>
+      <div className="h-1 w-8 rounded-full mt-3" style={{ background: cor }} />
+      <div className="text-sm font-semibold text-slate-800 mt-3">{titulo}</div>
+      {destaque ? (
+        <span
+          className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-sm font-semibold"
+          style={{ background: `${cor}1A`, color: cor }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: cor }} />
+          {detalhe}
+        </span>
+      ) : (
+        <div className="text-xs text-slate-400 mt-1.5">{detalhe}</div>
+      )}
     </div>
   );
 }
