@@ -28,7 +28,7 @@ import UsersPage from './pages/UsersPage';
 
 function Sistema() {
   const { autenticado, carregando, sair } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [currentPage, setCurrentPage] = useState<Page>('fin-dashboard');
   const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
   const [selectedProcessId, setSelectedProcessId] = useState<number | null>(null);
 
@@ -59,7 +59,7 @@ function Sistema() {
       onLogout={() => {
         sair();
         setAuthPage('login');
-        setCurrentPage('dashboard');
+        setCurrentPage('fin-dashboard');
       }}
     >
       {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
