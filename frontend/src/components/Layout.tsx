@@ -47,16 +47,6 @@ interface GrupoNav {
 // O menu tem dois módulos: a gestão de processos e o controle de pagamentos.
 const grupos: GrupoNav[] = [
   {
-    titulo: 'Jurídico',
-    itens: [
-      { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
-      { icon: Scale, label: 'Processos', page: 'processes' },
-      { icon: Upload, label: 'Importação', page: 'import', perfilMinimo: 'Analista' },
-      { icon: BarChart3, label: 'Análises', page: 'analytics' },
-      { icon: FileBarChart, label: 'Relatórios', page: 'reports' },
-    ],
-  },
-  {
     titulo: 'Financeiro',
     itens: [
       { icon: PiggyBank, label: 'Dashboard', page: 'fin-dashboard' },
@@ -69,6 +59,16 @@ const grupos: GrupoNav[] = [
       { icon: ListChecks, label: 'Cadastros', page: 'fin-cadastros' },
       { icon: ClipboardList, label: 'Hist. de alterações', page: 'fin-historico', perfilMinimo: 'Analista' },
       { icon: Upload, label: 'Importar pagamentos', page: 'fin-import', perfilMinimo: 'Analista' },
+    ],
+  },
+  {
+    titulo: 'Jurídico',
+    itens: [
+      { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
+      { icon: Scale, label: 'Processos', page: 'processes' },
+      { icon: Upload, label: 'Importação', page: 'import', perfilMinimo: 'Analista' },
+      { icon: BarChart3, label: 'Análises', page: 'analytics' },
+      { icon: FileBarChart, label: 'Relatórios', page: 'reports' },
     ],
   },
   {
