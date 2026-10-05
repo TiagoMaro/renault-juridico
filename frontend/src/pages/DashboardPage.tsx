@@ -12,6 +12,9 @@ import {
   TrendingUp,
   Users,
   XCircle,
+  Calendar, 
+  Clock,    
+  Banknote
 } from 'lucide-react';
 import {
   Area,
@@ -39,7 +42,7 @@ import {
   percentualInteiro,
   rotuloPercentual,
 } from '../components/graficos';
-import FiltrosGlobais, { BotaoFiltros } from '../components/FiltrosGlobais';
+import FiltrosGlobais from '../components/FiltrosGlobais';
 import { useRequisicao } from '../hooks/useRequisicao';
 import type { NavigateFn } from '../types';
 import { CORES_RISCO, data as formatarData, moedaCompacta, numero, percentual } from '../utils/formato';
@@ -97,15 +100,18 @@ export default function DashboardPage({ navigate }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 font-display">Dashboard Jurídico</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Visão consolidada dos processos e exposição jurídica</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <BotaoFiltros
-            aberto={filtersOpen}
-            aoAlternar={() => setFiltersOpen(o => !o)}
-            quantidade={filtrosAtivos}
-          />
-        </div>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                <Calendar size={13} />
+                Período de Análise: {periodo || 'Todo o histórico'}
+              </span>
+              {filtros.data_inicio && (
+                <span className="text-xs text-slate-500">
+                  (Filtrado a partir de {formatarData(filtros.data_inicio)})
+                </span>
+              )}
+              </div>
+          </div>
       </div>
 
       <FiltrosGlobais
@@ -192,6 +198,27 @@ export default function DashboardPage({ navigate }: Props) {
               invertido
               desc="exposição financeira"
               color="#EA580C"
+            />
+
+            <KpiCard
+              icon={Clock}
+              title="Prazos Fatais (< 48h)"
+              value={numero(dados.pontos_atencao.filter(p => p.severidade === 'critico').length)} 
+              trend={null}
+              invertido
+              desc="Risco de penhora/bloqueio"
+              color="#DC2626"
+              alerta={true}
+            />
+            <KpiCard
+              icon={Banknote}
+              title="Pagamentos Pendentes"
+              value={numero(dados.por_fase.find(f => f.label === 'Execução')?.quantidade ?? 0)}
+              trend={null}
+              invertido
+              desc="Processos na fase de Execução"
+              color="#EA580C"
+              alerta={true}
             />
             <KpiCard
               icon={Info}
@@ -449,39 +476,48 @@ export default function DashboardPage({ navigate }: Props) {
 
           {/* Pontos de atenção */}
           {dados.pontos_atencao.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-slate-900 text-sm font-display mb-3">Pontos de Atenção</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                {dados.pontos_atencao.map((ponto, i) => {
-                  const estilo = {
-                    critico: { icone: XCircle, cor: 'text-red-600', bg: 'bg-red-50', borda: 'border-red-100' },
-                    alerta: {
-                      icone: AlertTriangle,
-                      cor: 'text-amber-600',
-                      bg: 'bg-amber-50',
-                      borda: 'border-amber-100',
-                    },
-                    info: { icone: Info, cor: 'text-blue-600', bg: 'bg-blue-50', borda: 'border-blue-100' },
-                  }[ponto.severidade] ?? {
-                    icone: Info,
-                    cor: 'text-slate-600',
-                    bg: 'bg-slate-50',
-                    borda: 'border-slate-200',
-                  };
-                  const Icone = estilo.icone;
-                  return (
-                    <div
-                      key={i}
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border ${estilo.bg} ${estilo.borda}`}
-                    >
-                      <Icone size={20} className={`${estilo.cor} flex-shrink-0`} />
-                      <p className="text-sm font-medium text-slate-800 leading-snug">{ponto.texto}</p>
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={18} className="text-red-600" />
+              <h3 className="text-lg font-bold text-slate-900 font-display">Prazos Fatais e Alertas Críticos</h3>
             </div>
-          )}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {dados.pontos_atencao.map((ponto, i) => {
+                const isCritico = ponto.severidade === 'critico';
+                const estilo = isCritico 
+                  ? { icone: XCircle, cor: 'text-red-700', bg: 'bg-red-50', borda: 'border-red-200' }
+                  : { icone: AlertTriangle, cor: 'text-amber-700', bg: 'bg-amber-50', borda: 'border-amber-200' };
+                
+                const Icone = estilo.icone;
+                
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-4 p-5 rounded-xl border-l-4 shadow-sm ${estilo.bg} ${estilo.borda}`}
+                    style={{ borderLeftColor: isCritico ? '#DC2626' : '#D97706' }}
+                  >
+                    <Icone size={28} className={`${estilo.cor} flex-shrink-0`} />
+                    <div>
+                      <p className={`text-base font-bold ${estilo.cor} leading-snug mb-1`}>
+                        {isCritico ? 'AÇÃO IMEDIATA REQUERIDA' : 'ATENÇÃO'}
+                      </p>
+                      <p className="text-sm font-medium text-slate-800">{ponto.texto}</p>
+                      {isCritico && (
+                        <button 
+                          onClick={() => navigate('processes', { risco: 'Crítico' } as any)}
+                          className="mt-2 text-xs font-bold text-red-700 hover:underline"
+                        >
+                          Ver processos afetados →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
           {/* Recent processes table */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -528,7 +564,9 @@ export default function DashboardPage({ navigate }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {dados.processos_recentes.map(p => (
+                    {dados.processos_recentes
+                    .sort((a, b) => ((a.status === 'Ativo') === (b.status === 'Ativo') ? 0 : a.status === 'Ativo' ? -1 : 1))
+                     .map(p => (
                       <tr
                         key={p.id}
                         onClick={() => navigate('process-detail', { processId: p.id })}
