@@ -43,7 +43,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
           <div className="flex items-center gap-3 mb-10">
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm"
-              style={{ background: '#0035AD', color: 'white' }}
+              style={{ background: '#4713A4', color: 'white' }}
             >
               RG
             </div>
@@ -68,7 +68,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
                 autoComplete="username"
                 placeholder="seu@renaultgeely.com.br"
                 className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent bg-white transition-all"
-                style={{ '--tw-ring-color': '#0035AD' } as React.CSSProperties}
+                style={{ '--tw-ring-color': '#4713A4' } as React.CSSProperties}
               />
             </div>
 
@@ -82,7 +82,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
                   autoComplete="current-password"
                   placeholder="••••••••"
                   className="w-full px-4 py-2.5 pr-11 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent bg-white transition-all"
-                  style={{ '--tw-ring-color': '#0035AD' } as React.CSSProperties}
+                  style={{ '--tw-ring-color': '#4713A4' } as React.CSSProperties}
                 />
                 <button
                   type="button"
@@ -108,7 +108,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
                   checked={remember}
                   onChange={e => setRemember(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-300"
-                  style={{ accentColor: '#0035AD' }}
+                  style={{ accentColor: '#4713A4' }}
                 />
                 <span className="text-sm text-slate-600">Lembrar acesso</span>
               </label>
@@ -116,7 +116,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
                 type="button"
                 onClick={() => setErro('Recuperação de senha: solicite ao administrador do sistema.')}
                 className="text-sm font-medium transition-colors hover:underline"
-                style={{ color: '#0035AD' }}
+                style={{ color: '#4713A4' }}
               >
                 Esqueci minha senha
               </button>
@@ -126,7 +126,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
               type="submit"
               disabled={loading}
               className="w-full py-2.5 rounded-lg font-medium text-sm text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
-              style={{ background: '#0035AD' }}
+              style={{ background: '#4713A4' }}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -144,7 +144,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
             <button
               onClick={onRegister}
               className="text-sm font-medium transition-colors hover:underline"
-              style={{ color: '#0035AD' }}
+              style={{ color: '#4713A4' }}
             >
               Criar uma conta
             </button>
@@ -172,7 +172,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
 
         <div
           className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full opacity-10 blur-3xl"
-          style={{ background: '#0035AD' }}
+          style={{ background: '#4713A4' }}
         />
 
         <div className="relative z-10">
@@ -247,7 +247,7 @@ export default function LoginPage({ onRegister }: LoginPageProps) {
         <div className="relative z-10 flex items-center gap-2">
           <div
             className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ background: '#0035AD', color: 'white' }}
+            style={{ background: '#4713A4', color: 'white' }}
           >
             RG
           </div>

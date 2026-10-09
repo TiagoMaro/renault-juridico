@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Loader2, Pencil, Plus, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Download, Loader2, Pencil, Plus, Search, X } from 'lucide-react';
 
 import { api } from '../api/client';
 import type { FiltrosFinanceiro, Lancamento } from '../api/types';
@@ -12,6 +12,21 @@ import { data as formatarData, moeda, moedaCompacta, numero } from '../utils/for
 
 const BRAND = '#0035AD';
 const POR_PAGINA = 25;
+
+const MESES = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
 
 const CORES_STATUS: Record<string, string> = {
   'Lançar Pgto': 'bg-slate-100 text-slate-600',
@@ -92,6 +107,17 @@ export default function LancamentosPage() {
     }
   };
 
+  // Período em análise, derivado dos filtros de ano e mês. A tabela é paginada,
+  // então não dá para deduzir o intervalo a partir dos itens da página atual.
+  const periodo = useMemo(() => {
+    const { ano, mes } = filtros;
+    const nomeMes = mes ? (MESES[mes - 1] ?? `mês ${mes}`) : null;
+    if (nomeMes && ano) return `${nomeMes} de ${ano}`;
+    if (nomeMes) return nomeMes;
+    if (ano) return `Ano de ${ano}`;
+    return '';
+  }, [filtros]);
+
   const filtrosAtivos = Object.values(filtros).filter(v => v !== undefined && v !== '').length;
   const total = dados?.total ?? 0;
   const totalPaginas = dados?.total_paginas ?? 1;
@@ -106,6 +132,19 @@ export default function LancamentosPage() {
               ? 'Carregando...'
               : `${numero(total)} lançamento(s) · ${moeda(dados?.total_valor ?? 0)}`}
           </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-semibold flex items-center gap-1.5">
+              <Calendar size={13} />
+              Período de Análise: {periodo || 'Todo o histórico'}
+            </span>
+            {(filtros.data_de || filtros.data_ate) && (
+              <span className="text-xs text-slate-500">
+                (Filtrado
+                {filtros.data_de && ` a partir de ${formatarData(filtros.data_de)}`}
+                {filtros.data_ate && ` até ${formatarData(filtros.data_ate)}`})
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {podeEditar && (

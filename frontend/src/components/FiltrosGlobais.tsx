@@ -56,7 +56,7 @@ export function BotaoFiltros({ aberto, aoAlternar, quantidade }: { aberto: boole
       {quantidade > 0 && (
         <span
           className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-white"
-          style={{ background: '#0035AD' }}
+          style={{ background: '#4713A4' }}
         >
           {quantidade}
         </span>
@@ -101,14 +101,14 @@ export default function FiltrosGlobais({ filtros, aoAlterar, aberto, campos = TO
                   value={(filtros[campo] as string) ?? ''}
                   onChange={e => alterar(campo, e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#0035AD' } as React.CSSProperties}
+                  style={{ '--tw-ring-color': '#4713A4' } as React.CSSProperties}
                 />
               ) : (
                 <select
                   value={(filtros[campo] as string) ?? ''}
                   onChange={e => alterar(campo, e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#0035AD' } as React.CSSProperties}
+                  style={{ '--tw-ring-color': '#4713A4' } as React.CSSProperties}
                 >
                   <option value="">Todos</option>
                   {(listas[campo] ?? []).map(opcao => (

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   ArrowDownLeft,
   Banknote,
+  Calendar,
   CheckCircle2,
   Clock,
   Receipt,
@@ -27,9 +28,10 @@ import type { FiltrosFinanceiro, StatusLancamento } from '../api/types';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
 import { GraficoBarrasHorizontais, rotuloPercentual } from '../components/graficos';
 import FiltrosFinanceiros, { BotaoFiltrosFinanceiros } from '../components/FiltrosFinanceiros';
+import PainelRap from '../components/financeiro/PainelRap';
 import { useRequisicao } from '../hooks/useRequisicao';
 import type { NavigateFn } from '../types';
-import { moeda, moedaCompacta, numero } from '../utils/formato';
+import { data as formatarData, moeda, moedaCompacta, numero } from '../utils/formato';
 
 const BRAND = '#0035AD';
 const CORES_AREA = ['#0035AD', '#7C3AED', '#0891B2', '#059669', '#EA580C', '#DC2626', '#F59E0B', '#94A3B8'];
@@ -49,6 +51,17 @@ export default function FinanceDashboardPage({ navigate }: Props) {
     [chave],
   );
 
+  // Período em análise: do primeiro ao último mês que tem lançamentos.
+  // O ano só é conhecido quando o filtro de ano está aplicado (por_mes não traz o ano).
+  const periodo = useMemo(() => {
+    const meses = (dados?.por_mes ?? []).filter(m => m.quantidade > 0).sort((a, b) => a.mes - b.mes);
+    if (!meses.length) return '';
+    const primeiro = meses[0].nome;
+    const ultimo = meses[meses.length - 1].nome;
+    const intervalo = primeiro === ultimo ? primeiro : `${primeiro} a ${ultimo}`;
+    return filtros.ano ? `${intervalo} de ${filtros.ano}` : intervalo;
+  }, [dados, filtros.ano]);
+
   const filtrosAtivos = Object.values(filtros).filter(v => v !== undefined && v !== '').length;
 
   if (carregando && !dados) return <Carregando mensagem="Consolidando os pagamentos..." />;
@@ -65,6 +78,19 @@ export default function FinanceDashboardPage({ navigate }: Props) {
           <p className="text-sm text-slate-500 mt-0.5">
             Pagamentos do Jurídico — visão consolidada por área, EDOA e mês
           </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-semibold flex items-center gap-1.5">
+              <Calendar size={13} />
+              Período de Análise: {periodo || 'Todo o histórico'}
+            </span>
+            {(filtros.data_de || filtros.data_ate) && (
+              <span className="text-xs text-slate-500">
+                (Filtrado
+                {filtros.data_de && ` a partir de ${formatarData(filtros.data_de)}`}
+                {filtros.data_ate && ` até ${formatarData(filtros.data_ate)}`})
+              </span>
+            )}
+          </div>
         </div>
         <BotaoFiltrosFinanceiros
           aberto={filtrosAbertos}
@@ -261,6 +287,9 @@ export default function FinanceDashboardPage({ navigate }: Props) {
             <TabelaComposicao titulo="Por motivo" itens={dados.por_motivo.slice(0, 8)} />
             <TabelaComposicao titulo="Por centro de custo" itens={dados.por_centro_custo.slice(0, 8)} />
           </div>
+
+          {/* Painéis da apresentação do RAP */}
+          <PainelRap filtros={filtros} />
         </>
       )}
       {detalhe && (

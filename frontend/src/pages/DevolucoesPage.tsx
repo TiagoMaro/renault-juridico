@@ -8,6 +8,8 @@ import ModalFormulario from '../components/financeiro/ModalFormulario';
 import { useAuth } from '../context/AuthContext';
 import { useRequisicao } from '../hooks/useRequisicao';
 import { data as formatarData, moeda, numero } from '../utils/formato';
+import SeloPeriodo from '../components/SeloPeriodo';
+import { periodoDosAnos } from '../utils/periodo';
 
 const BRAND = '#0035AD';
 
@@ -26,6 +28,7 @@ export default function DevolucoesPage() {
 
   const itens = dados ?? [];
   const total = itens.reduce((soma, i) => soma + i.valor_devolvido, 0);
+  const periodo = periodoDosAnos(itens.map(i => i.ano_referencia));
 
   // Concentração por fornecedor, para ver de quem vem o dinheiro de volta.
   const porFornecedor = Object.entries(
@@ -44,6 +47,7 @@ export default function DevolucoesPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 font-display">Devoluções</h1>
           <p className="text-sm text-slate-500 mt-0.5">Valores estornados pelos escritórios</p>
+          <SeloPeriodo periodo={carregando ? 'Carregando...' : periodo} />
         </div>
         {podeEditar && (
           <button

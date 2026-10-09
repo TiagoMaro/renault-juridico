@@ -24,8 +24,10 @@ import {
   useAnoFinanceiro,
 } from '../components/financeiro/comum';
 import { useAuth } from '../context/AuthContext';
+import SeloPeriodo from '../components/SeloPeriodo';
 import { useRequisicao } from '../hooks/useRequisicao';
 import { moeda, moedaCompacta } from '../utils/formato';
+import { periodoDoIntervalo } from '../utils/periodo';
 
 type Aba = 'rap' | 'fixo-variavel' | 'plano' | 'contratos';
 
@@ -48,6 +50,10 @@ export default function OrcamentoPage() {
 
   if (ano === null) return <Carregando mensagem="Carregando exercícios..." />;
 
+  // RAP e honorários fixo × variável vão até o mês de fechamento; plano e contratos cobrem o ano todo.
+  const usaFechamento = aba === 'rap' || aba === 'fixo-variavel';
+  const periodo = periodoDoIntervalo(ano, 1, usaFechamento ? (mes ?? 12) : 12);
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -56,6 +62,7 @@ export default function OrcamentoPage() {
           <p className="text-sm text-slate-500 mt-0.5">
             Budget da planilha contra os lançamentos — realizado recalculado com o critério de cada linha
           </p>
+          <SeloPeriodo periodo={periodo} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SeletorAno ano={ano} anos={anos} aoAlterar={setAno} />

@@ -73,7 +73,7 @@ export default function RegisterPage({ onBack }: RegisterPageProps) {
             <div className="flex items-center gap-3 mb-4">
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm"
-                style={{ background: '#0035AD', color: 'white' }}
+                style={{ background: '#4713A4', color: 'white' }}
               >
                 RG
               </div>
@@ -189,7 +189,7 @@ export default function RegisterPage({ onBack }: RegisterPageProps) {
                 type="submit"
                 disabled={loading}
                 className="w-full py-2.5 rounded-lg font-medium text-sm text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
-                style={{ background: '#0035AD' }}
+                style={{ background: '#4713A4' }}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">

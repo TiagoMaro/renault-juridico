@@ -10,8 +10,10 @@ import { api } from '../api/client';
 import type { AnaliseResponse, LinhaAnalise } from '../api/types';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
 import { Cartao, SeletorAno, SeletorMes, useAnoFinanceiro } from '../components/financeiro/comum';
+import SeloPeriodo from '../components/SeloPeriodo';
 import { useRequisicao } from '../hooks/useRequisicao';
 import { moeda, moedaCompacta, numero } from '../utils/formato';
+import { periodoDoIntervalo } from '../utils/periodo';
 
 const DIMENSOES: Record<string, string> = {
   area: 'Área',
@@ -64,6 +66,7 @@ export default function AnalisePage() {
     });
 
   const edoas = opcoes?.edoas ?? [PADRAO_EDOA];
+  const periodo = periodoDoIntervalo(ano, mesDe, mesAte);
 
   return (
     <div className="p-6 space-y-5">
@@ -73,6 +76,7 @@ export default function AnalisePage() {
           <p className="text-sm text-slate-500 mt-0.5">
             Tabela dinâmica dos lançamentos — a aba LGPD da planilha é esta análise com o EDOA "{PADRAO_EDOA}"
           </p>
+          <SeloPeriodo periodo={periodo} />
         </div>
         <div className="flex items-center gap-2">
           <SeletorAno ano={ano} anos={anos} aoAlterar={setAno} />

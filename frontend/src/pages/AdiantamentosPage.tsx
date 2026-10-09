@@ -6,8 +6,10 @@ import type { Adiantamento } from '../api/types';
 import { Carregando, ErroCarregamento, EstadoVazio } from '../components/Estados';
 import ModalFormulario from '../components/financeiro/ModalFormulario';
 import { useAuth } from '../context/AuthContext';
+import SeloPeriodo from '../components/SeloPeriodo';
 import { useRequisicao } from '../hooks/useRequisicao';
 import { moeda, moedaCompacta, numero } from '../utils/formato';
+import { periodoDosAnos } from '../utils/periodo';
 
 const BRAND = '#0035AD';
 
@@ -32,6 +34,7 @@ export default function AdiantamentosPage() {
   const totalAdiantado = itens.reduce((soma, i) => soma + i.valor, 0);
   const totalExcedente = itens.reduce((soma, i) => soma + i.valor_excedente, 0);
   const emAberto = itens.filter(i => !i.baixado);
+  const periodo = periodoDosAnos(itens.map(i => i.ano_referencia));
 
   return (
     <div className="p-6 space-y-5">
@@ -41,6 +44,7 @@ export default function AdiantamentosPage() {
           <p className="text-sm text-slate-500 mt-0.5">
             Valores adiantados aos escritórios e o controle das baixas
           </p>
+          <SeloPeriodo periodo={carregando ? 'Carregando...' : periodo} />
         </div>
         <div className="flex items-center gap-2">
         {podeEditar && (

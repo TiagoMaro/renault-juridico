@@ -160,13 +160,13 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
       {/* Sidebar */}
       <aside
         className={`flex flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'}`}
-        style={{ background: '#0D1B3E' }}
+        style={{ background: '#160B3D' }}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
           <div
             className="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center font-bold text-sm"
-            style={{ background: '#0035AD', color: 'white' }}
+            style={{ background: '#4713A4', color: 'white' }}
           >
             RG
           </div>
@@ -187,7 +187,7 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
               {sidebarOpen && (
                 <p
                   className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: '#4A6FA5' }}
+                  style={{ color: '#8467AD' }}
                 >
                   {grupo.titulo}
                 </p>
@@ -202,12 +202,12 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
                     title={!sidebarOpen ? `${grupo.titulo} · ${label}` : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative ${active ? 'text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
-                    style={active ? { background: 'rgba(0,53,173,0.5)' } : {}}
+                    style={active ? { background: '#4713A4' } : {}}
                   >
                     {active && (
                       <span
                         className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full"
-                        style={{ background: '#4D8FFF' }}
+                        style={{ background: '#8467AD' }}
                       />
                     )}
                     <Icon size={17} className="flex-shrink-0" />
@@ -225,7 +225,7 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
             <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: '#0035AD', color: 'white' }}
+                style={{ background: '#4713A4', color: 'white' }}
               >
                 {usuario?.iniciais ?? '--'}
               </div>
@@ -289,7 +289,7 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
               onChange={e => setBusca(e.target.value)}
               placeholder="Buscar processos..."
               className="pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-              style={{ '--tw-ring-color': '#0035AD' } as React.CSSProperties}
+              style={{ '--tw-ring-color': '#4713A4' } as React.CSSProperties}
             />
           </form>
 
@@ -343,7 +343,7 @@ export default function Layout({ currentPage, navigate, onLogout, children }: La
           >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{ background: '#0035AD', color: 'white' }}
+              style={{ background: '#4713A4', color: 'white' }}
             >
               {usuario?.iniciais ?? '--'}
             </div>
